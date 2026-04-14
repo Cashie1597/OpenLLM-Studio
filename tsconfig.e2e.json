@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "mocha", "@wdio/globals/types"],
+    "moduleResolution": "node",
+    "esModuleInterop": true
+  },
+  "include": ["e2e/**/*.ts", "wdio.conf.ts"]
+}
