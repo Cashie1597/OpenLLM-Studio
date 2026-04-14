@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '../lib/types';
 import { cn } from '../lib/utils';
 
@@ -36,22 +37,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           ? 'bg-[#C15F3C] text-white rounded-tr-md' 
           : 'bg-[#1C1C1C] text-white rounded-tl-md border border-[#333333]'
       )}>
-        <div className={cn(
-          'text-sm leading-relaxed',
-          'prose prose-sm prose-invert max-w-none'
-        )}>
-          <ReactMarkdown 
-            className={cn(
-              '[&>*]:my-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
-              '[&_code]:bg-[#0A0A0A] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs',
-              '[&_pre]:bg-[#0A0A0A] [&_pre]:border [&_pre]:border-[#333333] [&_pre]:rounded-lg [&_pre]:p-4',
-              '[&_pre]:overflow-x-auto [&_pre]:my-3',
-              isUser && '[&_code]:bg-[#A84E2F] [&_pre]:bg-[#A84E2F]'
-            )}
+        {isUser ? (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_:not(pre)>code]:bg-[#0A0A0A] [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:rounded [&_:not(pre)>code]:text-xs [&_pre]:bg-[#0A0A0A] [&_pre]:border [&_pre]:border-[#333333] [&_pre]:rounded-lg [&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:my-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-xs"
           >
             {message.content}
           </ReactMarkdown>
-        </div>
+        )}
       </div>
     </div>
   );
