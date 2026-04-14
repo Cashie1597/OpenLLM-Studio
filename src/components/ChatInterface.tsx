@@ -61,7 +61,7 @@ export function ChatInterface({
         if (event.payload.conversation_id && event.payload.conversation_id !== conversation.id) return;
 
         const { content, seq } = event.payload;
-        if (!content || content.trim() === '') return;
+        if (content === undefined || content === null || content === '') return;
 
         if (seq !== undefined) {
           if (seq <= lastSeqRef.current) return;

@@ -31,8 +31,8 @@ export function useChat(dbPath: string, conversationId: string | null, modelName
       const unlistenFn = await listenToChatToken((token) => {
         if (!mounted) return;
         if (token.conversation_id === conversationId) {
-          // Skip empty tokens
-          if (!token.content || token.content.trim() === '') {
+          // Preserve whitespace-only tokens because they carry markdown structure
+          if (token.content === undefined || token.content === null || token.content === '') {
             return;
           }
           
@@ -83,6 +83,15 @@ export function useChat(dbPath: string, conversationId: string | null, modelName
     setIsStreaming(true);
     clearStreamingContent();
 
+    // Add user message immediately so it shows in UI right away
+    addMessage({
+      id: '',
+      conversation_id: conversationId,
+      role: 'user',
+      content,
+      created_at: new Date().toISOString(),
+    });
+
     // Build messages array from conversation history
     const chatMessages: ChatMessage[] = [
       ...messages.map((msg) => ({
@@ -105,28 +114,37 @@ export function useChat(dbPath: string, conversationId: string | null, modelName
 
     try {
       const response = await sendChatMessage(dbPath, conversationId, modelName, chatMessages, options);
-      
-      // Add user message to local state
-      addMessage({
-        id: '', // Will be set by backend
-        conversation_id: conversationId,
-        role: 'user',
-        content,
-        created_at: new Date().toISOString(),
-      });
+
+      // Log raw response — open webview devtools (right-click → Inspect) to see this
+      console.log('%c[RAW RESPONSE]', 'color: orange; font-weight: bold', response);
 
       // Add assistant message to local state
       addMessage({
-        id: '', // Will be set by backend
+        id: '',
         conversation_id: conversationId,
         role: 'assistant',
         content: response,
         created_at: new Date().toISOString(),
       });
     } catch (err) {
+      // If generation was stopped mid-stream, add whatever was streamed so far
+      const partial = useAppStore.getState().streamingContent;
+      if (partial.trim()) {
+        console.log('[RAW RESPONSE (partial)]', partial);
+        addMessage({
+          id: '',
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: partial,
+          created_at: new Date().toISOString(),
+        });
+      }
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
-      setError(errorMessage);
-      console.error('Failed to send chat message:', err);
+      // Only set error if it's not a user-initiated stop
+      if (!errorMessage.toLowerCase().includes('stop') && !errorMessage.toLowerCase().includes('cancel') && !errorMessage.toLowerCase().includes('abort')) {
+        setError(errorMessage);
+        console.error('Failed to send chat message:', err);
+      }
     } finally {
       setIsStreaming(false);
       clearStreamingContent();

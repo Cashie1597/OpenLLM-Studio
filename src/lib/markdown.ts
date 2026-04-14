@@ -3,6 +3,11 @@ export interface StreamingMarkdownParts {
   trailingText: string;
 }
 
+/**
+ * Prepares streaming markdown for rendering mid-generation.
+ * Passes content through as-is (the model outputs valid markdown),
+ * but closes any open syntax so the parser doesn't break on partial tokens.
+ */
 export function splitStreamingMarkdown(content: string): StreamingMarkdownParts {
   const normalized = content.replace(/\r\n/g, '\n');
   const lastNewlineIndex = normalized.lastIndexOf('\n');
@@ -18,74 +23,80 @@ export function splitStreamingMarkdown(content: string): StreamingMarkdownParts 
   const trailingText = normalized.slice(lastNewlineIndex + 1);
 
   return {
-    stableMarkdown: buildProgressiveMarkdown(stableSource),
+    stableMarkdown: closeOpenSyntax(ensureProgressiveLineBreaks(stableSource)),
     trailingText,
   };
 }
 
-function buildProgressiveMarkdown(content: string): string {
+function ensureProgressiveLineBreaks(content: string): string {
   const lines = content.split('\n');
-  const renderedLines: string[] = [];
   let inFence = false;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  return lines
+    .map((line, index) => {
+      const isLastLine = index === lines.length - 1;
+      const trimmed = line.trimStart();
 
-    if (trimmed.startsWith('```')) {
-      renderedLines.push(line);
-      inFence = !inFence;
-      continue;
-    }
+      if (trimmed.startsWith('```')) {
+        inFence = !inFence;
+        return line;
+      }
 
-    if (inFence) {
-      renderedLines.push(line);
-      continue;
-    }
+      if (isLastLine) {
+        return line;
+      }
 
-    if (trimmed.length === 0) {
-      renderedLines.push('');
-      continue;
-    }
+      if (inFence || line === '' || isMarkdownBlockLine(line)) {
+        return line;
+      }
 
-    if (isBlockMarkdownLine(trimmed)) {
-      renderedLines.push(line);
-      continue;
-    }
+      if (/[ \t]{2}$/.test(line)) {
+        return line;
+      }
 
-    renderedLines.push(`${line}  `);
+      return `${line}  `;
+    })
+    .join('\n');
+}
+
+function isMarkdownBlockLine(line: string): boolean {
+  const trimmed = line.trimStart();
+
+  if (trimmed === '') {
+    return true;
   }
 
-  let result = renderedLines.join('\n');
+  return /^(#{1,6}\s|[-*_]{3,}\s*$|>\s|(?:[-+*]|\d+[.)])\s|```|~~~|\|.*\||\s*\[[ xX]\]\s)/.test(trimmed);
+}
 
-  const inlineTicks = countUnescapedBackticks(result) - countTripleFenceTicks(result);
-  if (inlineTicks > 0 && inlineTicks % 2 === 1) {
-    result += '`';
-  }
+function closeOpenSyntax(content: string): string {
+  let result = content;
 
+  // Detect open fence by counting fence-opening lines vs fence-closing lines.
+  // A line that starts with ``` is a fence marker. Odd count = still open.
+  const fenceLines = result.split('\n').filter(l => l.trim().startsWith('```'));
+  const inFence = fenceLines.length % 2 === 1;
+
+  // If we're inside a fence, close it so the parser renders what's there
   if (inFence) {
     result += '\n```';
+    return result; // Don't mess with inline markers inside a code block
   }
+
+  // Close open inline backtick (single `)
+  // Count single backticks that are NOT part of triple backticks
+  const withoutFences = result.replace(/```[\s\S]*?```/g, '').replace(/```/g, '');
+  const singleTicks = (withoutFences.match(/(?<!\\)`/g) ?? []).length;
+  if (singleTicks % 2 === 1) result += '`';
+
+  // Close open bold **
+  const boldCount = (result.match(/\*\*/g) ?? []).length;
+  if (boldCount % 2 === 1) result += '**';
+
+  // Close open italic * (excluding ** pairs)
+  const withoutBold = result.replace(/\*\*/g, '');
+  const italicCount = (withoutBold.match(/\*/g) ?? []).length;
+  if (italicCount % 2 === 1) result += '*';
 
   return result;
-}
-
-function isBlockMarkdownLine(trimmed: string): boolean {
-  return /^(#{1,6}\s|\>\s|[-*+]\s|\d+\.\s|\|.*\||(?:-{3,}|\*{3,}|_{3,}))$/.test(trimmed);
-}
-
-function countUnescapedBackticks(content: string): number {
-  let count = 0;
-
-  for (let i = 0; i < content.length; i += 1) {
-    if (content[i] === '`' && content[i - 1] !== '\\') {
-      count += 1;
-    }
-  }
-
-  return count;
-}
-
-function countTripleFenceTicks(content: string): number {
-  const matches = content.match(/```/g);
-  return matches ? matches.length * 3 : 0;
 }

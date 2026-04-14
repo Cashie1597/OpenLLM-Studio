@@ -112,12 +112,27 @@ impl RuntimeManager {
         }
 
         let base_url = self.ensure_model_loaded(model_name, options).await?;
+
+        // Prepend a system prompt if one isn't already present
+        let messages_with_system: Vec<ChatMessage>;
+        let effective_messages: &[ChatMessage] = if messages.first().map(|m| m.role.as_str()) == Some("system") {
+            messages
+        } else {
+            messages_with_system = std::iter::once(ChatMessage {
+                role: "system".to_string(),
+                content: "You are a helpful assistant. Format your responses using proper Markdown:\n- Use **bold** and *italic* for emphasis\n- Use # ## ### for headings, always preceded and followed by a blank line\n- Use fenced code blocks with a language tag on their own line, e.g.:\n  ```python\n  code here\n  ```\n- Use - or 1. for lists\n- Separate paragraphs with a blank line\n- Never run headings, code fences, or list items together on the same line as other text".to_string(),
+            })
+            .chain(messages.iter().cloned())
+            .collect();
+            &messages_with_system
+        };
+
         let response = self
             .client
             .post(format!("{}/v1/chat/completions", base_url))
             .json(&serde_json::json!({
                 "model": model_name,
-                "messages": messages,
+                "messages": effective_messages,
                 "stream": true,
                 "temperature": 0.7,
             }))

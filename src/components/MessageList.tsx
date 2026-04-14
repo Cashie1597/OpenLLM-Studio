@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
 import type { Message } from '../lib/types';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { splitStreamingMarkdown } from '../lib/markdown';
 
 interface MessageListProps {
@@ -38,27 +39,25 @@ function StreamingMessage({ content }: { content: string }) {
 
   return (
     <div className="flex items-start gap-3 mb-6">
-      {/* AI Avatar */}
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C15F3C] to-[#D47A5A] flex items-center justify-center flex-shrink-0">
         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
-      
-      {/* Streaming content */}
       <div className="max-w-[80%] bg-[#1C1C1C] border border-[#333333] rounded-2xl rounded-tl-md px-4 py-3">
-        <div className="text-sm leading-relaxed text-white">
-          {stableMarkdown ? (
-            <ReactMarkdown className="prose prose-sm prose-invert max-w-none [&>*]:my-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_code]:bg-[#0A0A0A] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre]:bg-[#0A0A0A] [&_pre]:border [&_pre]:border-[#333333] [&_pre]:rounded-lg [&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:my-3">
-              {stableMarkdown}
-            </ReactMarkdown>
-          ) : null}
-          {trailingText ? (
-            <div className="whitespace-pre-wrap break-words text-white">
-              {trailingText}
-            </div>
-          ) : null}
-        </div>
+        {stableMarkdown && (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_:not(pre)>code]:bg-[#0A0A0A] [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:rounded [&_:not(pre)>code]:text-xs [&_pre]:bg-[#0A0A0A] [&_pre]:border [&_pre]:border-[#333333] [&_pre]:rounded-lg [&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:my-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-xs"
+          >
+            {stableMarkdown}
+          </ReactMarkdown>
+        )}
+        {trailingText && (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-white/95">
+            {trailingText}
+          </p>
+        )}
       </div>
     </div>
   );
