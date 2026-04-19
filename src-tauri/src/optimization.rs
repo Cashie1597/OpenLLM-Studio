@@ -136,6 +136,7 @@ mod tests {
             ram_gb: 32.0,
             cpu_cores: 16,
             disk_space_gb: Some(500.0),
+            is_shared_memory: None,
         };
 
         let settings = OptimizationCalculator::calculate(&hardware);

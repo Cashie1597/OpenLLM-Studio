@@ -57,7 +57,7 @@ pub async fn detect_hardware_cached(db_path: String) -> Result<crate::models::Ha
     let cache_threshold = now - 86400;
     
     let cached: Result<crate::models::HardwareInfo, _> = conn.query_row(
-        "SELECT gpu_name, gpu_backend, vram_gb, ram_gb, cpu_cores, disk_space_gb 
+        "SELECT gpu_name, gpu_backend, vram_gb, ram_gb, cpu_cores, disk_space_gb, is_shared_memory
          FROM hardware_info 
          WHERE scanned_at > ?1 
          ORDER BY scanned_at DESC 
@@ -80,6 +80,7 @@ pub async fn detect_hardware_cached(db_path: String) -> Result<crate::models::Ha
                 ram_gb: row.get(3)?,
                 cpu_cores: row.get(4)?,
                 disk_space_gb: row.get(5)?,
+                is_shared_memory: row.get(6).ok().flatten(),
             })
         },
     );
@@ -103,8 +104,8 @@ pub async fn detect_hardware_cached(db_path: String) -> Result<crate::models::Ha
     };
     
     conn.execute(
-        "INSERT INTO hardware_info (gpu_name, gpu_backend, vram_gb, ram_gb, cpu_cores, disk_space_gb, scanned_at) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO hardware_info (gpu_name, gpu_backend, vram_gb, ram_gb, cpu_cores, disk_space_gb, is_shared_memory, scanned_at) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         rusqlite::params![
             &info.gpu_name,
             backend_str,
@@ -112,6 +113,7 @@ pub async fn detect_hardware_cached(db_path: String) -> Result<crate::models::Ha
             info.ram_gb,
             info.cpu_cores,
             info.disk_space_gb,
+            info.is_shared_memory,
             now,
         ],
     ).map_err(|e| format!("Failed to cache hardware info: {}", e))?;
