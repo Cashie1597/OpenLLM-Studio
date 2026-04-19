@@ -69,6 +69,9 @@ pub struct HardwareInfo {
     pub cpu_cores: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub disk_space_gb: Option<f64>,
+    /// True if GPU uses shared system RAM (integrated GPUs) rather than dedicated VRAM
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_shared_memory: Option<bool>,
 }
 
 /// GPU backend type for hardware acceleration

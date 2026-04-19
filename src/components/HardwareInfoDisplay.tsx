@@ -8,6 +8,7 @@ interface HardwareInfo {
   ram_gb: number;
   cpu_cores: number;
   disk_space_gb?: number;
+  is_shared_memory?: boolean;
 }
 
 export function HardwareInfoDisplay() {
@@ -82,7 +83,12 @@ export function HardwareInfoDisplay() {
 
         <div>
           <div className="text-sm text-gray-600 dark:text-gray-400">VRAM</div>
-          <div className="font-medium">{hardware.vram_gb.toFixed(1)} GB</div>
+          <div className="font-medium">
+            {hardware.vram_gb.toFixed(1)} GB
+            {hardware.is_shared_memory && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded">shared</span>
+            )}
+          </div>
         </div>
 
         <div>

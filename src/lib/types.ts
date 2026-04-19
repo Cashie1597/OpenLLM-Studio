@@ -58,6 +58,8 @@ export interface HardwareInfo {
   vram_gb: number;
   ram_gb: number;
   cpu_cores: number;
+  disk_space_gb?: number;
+  is_shared_memory?: boolean;
 }
 
 // HuggingFace types

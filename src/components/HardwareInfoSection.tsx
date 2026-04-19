@@ -103,7 +103,12 @@ export function HardwareInfoSection({ hardwareInfo, onRedetect, isDetecting }: H
               </div>
               <div>
                 <p className="text-xs text-[#B1ADA1]">VRAM</p>
-                <p className="text-sm text-white font-medium">{hardwareInfo.vram_gb.toFixed(1)} GB</p>
+                <p className="text-sm text-white font-medium">
+                  {hardwareInfo.vram_gb.toFixed(1)} GB
+                  {hardwareInfo.is_shared_memory && (
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-900/40 text-amber-400 rounded">shared</span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="w-full bg-[#2A2A2A] rounded-full h-1.5">

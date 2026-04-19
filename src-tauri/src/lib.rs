@@ -92,6 +92,12 @@ pub fn run() {
                             sql: include_str!("../migrations/004_hardware_info.sql"),
                             kind: tauri_plugin_sql::MigrationKind::Up,
                         },
+                        tauri_plugin_sql::Migration {
+                            version: 5,
+                            description: "add is_shared_memory column to hardware_info",
+                            sql: include_str!("../migrations/005_is_shared_memory.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
                     ],
                 )
                 .build(),
