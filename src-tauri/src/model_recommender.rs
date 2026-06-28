@@ -29,6 +29,8 @@ pub enum UseCase {
 
 pub struct ModelRecommender;
 
+const DEFAULT_OPENROUTER_FREE_MODEL: &str = "google/gemma-4-26b-a4b-it:free";
+
 #[derive(Debug, Clone)]
 struct VerifiedRepoCandidate {
     repo_id: String,
@@ -69,7 +71,7 @@ impl ModelRecommender {
                 },
             );
 
-            return self
+            return match self
                 .get_ai_recommendations(
                     available_ram_gb,
                     available_vram_gb,
@@ -80,7 +82,25 @@ impl ModelRecommender {
                     hf_token,
                     app_handle,
                 )
-                .await;
+                .await
+            {
+                Ok(recommendations) => Ok(recommendations),
+                Err(error) => {
+                    println!(
+                        "[ModelRecommender] AI recommendations failed; falling back to local recommendations: {}",
+                        error
+                    );
+                    let _ = app_handle.emit(
+                        "wizard-status",
+                        "AI recommendation unavailable. Falling back to local model options...",
+                    );
+                    self.get_fallback_recommendations(
+                        available_ram_gb,
+                        available_vram_gb,
+                        use_case,
+                    )
+                }
+            };
         }
 
         let _ = app_handle.emit(
@@ -159,7 +179,7 @@ impl ModelRecommender {
         hf_token: Option<String>,
         app_handle: &tauri::AppHandle,
     ) -> Result<Vec<ModelRecommendation>, AppError> {
-        let model_id = model.unwrap_or_else(|| "google/gemma-4-27b-it:free".to_string());
+        let model_id = model.unwrap_or_else(|| DEFAULT_OPENROUTER_FREE_MODEL.to_string());
         println!("[ModelRecommender] OpenRouter using model: {}", model_id);
 
         let payload = serde_json::json!({
